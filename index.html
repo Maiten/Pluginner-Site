@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pluginner FX — Beta Test</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: hsl(220, 20%, 4%);
+      --bg-surface: hsl(220, 14%, 9%);
+      --bg-raised: hsl(220, 12%, 13%);
+      --border: hsl(220, 12%, 18%);
+      --border-focus: hsl(175, 70%, 42%);
+      --text: hsl(210, 20%, 92%);
+      --text-dim: hsl(215, 12%, 52%);
+      --text-muted: hsl(215, 12%, 40%);
+      --accent: hsl(175, 70%, 42%);
+      --accent-hover: hsl(175, 70%, 48%);
+      --accent-dim: hsl(175, 40%, 20%);
+      --danger: hsl(0, 72%, 55%);
+      --success: hsl(152, 60%, 42%);
+      --warning: hsl(40, 80%, 55%);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+
+    /* Password gate */
+    #password-gate {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .pw-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 48px 40px;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+    }
+    .pw-card h1 {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+    .pw-card h1 span { color: var(--text); opacity: 0.6; font-weight: 400; }
+    .pw-card .subtitle { font-size: 13px; color: var(--text-dim); margin-bottom: 32px; }
+    .pw-error { color: var(--danger); font-size: 13px; margin-top: 8px; display: none; }
+
+    /* Main app */
+    #app { display: none; }
+    .container { max-width: 720px; margin: 0 auto; padding: 0 20px; }
+
+    /* Header */
+    .header {
+      padding: 32px 0 24px;
+      text-align: center;
+      border-bottom: 1px solid hsl(220, 12%, 10%);
+      margin-bottom: 32px;
+    }
+    .header h1 {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .header h1 span { color: var(--text); opacity: 0.6; font-weight: 400; }
+    .header p { font-size: 14px; color: var(--text-dim); margin-top: 4px; }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 32px;
+      overflow-x: auto;
+    }
+    .tab {
+      flex: 1;
+      padding: 10px 12px;
+      border: none;
+      background: transparent;
+      color: var(--text-dim);
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .tab:hover { color: var(--text); background: hsl(220, 12%, 11%); }
+    .tab.active {
+      background: var(--bg-raised);
+      color: var(--accent);
+      box-shadow: 0 1px 4px hsl(220, 18%, 4%, 0.4);
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Cards */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      margin-bottom: 20px;
+    }
+    .card h2 { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+    .card h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text); }
+    .card .desc { font-size: 13px; color: var(--text-dim); margin-bottom: 20px; line-height: 1.6; }
+
+    /* Callout boxes */
+    .callout {
+      background: hsl(175, 70%, 42%, 0.04);
+      border: 1px solid hsl(175, 70%, 42%, 0.15);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.7;
+    }
+    .callout strong { color: var(--text); }
+
+    /* Form elements */
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    label .required { color: var(--accent); }
+    input[type="text"], input[type="email"], input[type="password"], textarea, select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s;
+      margin-bottom: 16px;
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px hsl(175, 70%, 42%, 0.1);
+    }
+    ::placeholder { color: var(--text-muted); }
+    textarea { resize: vertical; min-height: 80px; }
+    select { cursor: pointer; }
+    select option { background: var(--bg); color: var(--text); }
+
+    /* Checkboxes */
+    .checkbox-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      user-select: none;
+    }
+    .checkbox-label:hover { border-color: hsl(220, 12%, 24%); }
+    .checkbox-label.checked {
+      border-color: var(--accent);
+      background: hsl(175, 70%, 42%, 0.06);
+      color: var(--accent);
+    }
+    .checkbox-label input { display: none; }
+
+    /* Radio group (ratings) */
+    .rating-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .rating-row .rating-label {
+      flex: 1;
+      font-size: 13px;
+      color: var(--text);
+      min-width: 200px;
+    }
+    .rating-pills {
+      display: flex;
+      gap: 4px;
+    }
+    .rating-pill {
+      width: 36px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .rating-pill:hover { border-color: hsl(220, 12%, 24%); color: var(--text); }
+    .rating-pill.selected {
+      background: var(--accent);
+      color: hsl(220, 18%, 7%);
+      border-color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* Match rating */
+    .match-pills { display: flex; gap: 6px; }
+    .match-pill {
+      padding: 6px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 18px;
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .match-pill:hover { border-color: hsl(220, 12%, 24%); }
+    .match-pill.selected { border-color: var(--accent); background: hsl(175, 70%, 42%, 0.08); }
+
+    /* Buttons */
+    .btn {
+      padding: 10px 24px;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: var(--accent); color: hsl(220, 18%, 7%); }
+    .btn-primary:hover { background: var(--accent-hover); box-shadow: 0 0 16px hsl(175, 70%, 42%, 0.25); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary { background: var(--bg-raised); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { border-color: hsl(220, 12%, 24%); }
+    .btn-small { padding: 6px 14px; font-size: 12px; }
+    .btn-row { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+
+    /* Log entries */
+    .log-entry {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .log-entry .entry-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .log-entry .entry-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent);
+      background: hsl(175, 70%, 42%, 0.1);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .log-entry .entry-remove {
+      margin-left: auto;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .log-entry .entry-remove:hover { color: var(--danger); }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .form-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+    @media (max-width: 600px) { .form-grid, .form-grid.cols-3 { grid-template-columns: 1fr; } }
+
+    /* Section headers */
+    .section-header {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 14px;
+      margin-top: 8px;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 20px;
+      font-size: 14px;
+      box-shadow: 0 8px 32px hsl(220, 18%, 4%, 0.6);
+      z-index: 1000;
+      transform: translateY(120%);
+      transition: transform 0.3s;
+    }
+    .toast.show { transform: translateY(0); }
+    .toast.success { border-color: var(--success); }
+    .toast.error { border-color: var(--danger); }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .card { padding: 20px 16px; }
+      .tabs { overflow-x: auto; }
+    }
+
+    /* Status dot */
+    .status-saved { color: var(--success); font-size: 12px; }
+    .status-pending { color: var(--warning); font-size: 12px; }
+
+    /* Protocol text styling */
+    .protocol-text { font-size: 14px; line-height: 1.75; color: var(--text); }
+    .protocol-text p { margin-bottom: 12px; }
+    .protocol-text em { color: var(--text-dim); font-style: italic; }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 32px 0;
+      margin-top: 48px;
+      border-top: 1px solid hsl(220, 12%, 10%);
+    }
+    footer p { font-size: 12px; color: var(--text-dim); opacity: 0.4; }
+  </style>
+</head>
+<body>
+
+<!-- PASSWORD GATE -->
+<div id="password-gate">
+  <div class="pw-card">
+    <h1>Pluginner <span>FX</span></h1>
+    <p class="subtitle">Beta Test Portal</p>
+    <div>
+      <input type="password" id="pw-input" placeholder="Enter access code" autocomplete="off">
+      <button type="button" class="btn btn-primary" style="width:100%; margin-top:8px" id="pw-btn">Enter</button>
+    </div>
+    <p class="pw-error" id="pw-error">Wrong code. Try again.</p>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <div class="container">
+    <div class="header">
+      <h1>Pluginner <span>FX</span></h1>
+      <p>Beta Test Portal</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-tab="signup">Sign Up</button>
+      <button class="tab" data-tab="protocol">Protocol</button>
+      <button class="tab" data-tab="freeplay">Free Play</button>
+      <button class="tab" data-tab="challenges">Challenges</button>
+      <button class="tab" data-tab="survey">Survey</button>
+    </div>
+
+    <!-- TAB: Sign Up -->
+    <div class="tab-panel active" id="panel-signup">
+      <div class="card">
+        <h2>Join the Beta</h2>
+        <p class="desc">Sign up to get the download link and access the feedback forms.</p>
+
+        <form id="signup-form" onsubmit="return handleSignup(event)">
+          <div class="form-grid">
+            <div>
+              <label>Name <span class="required">*</span></label>
+              <input type="text" id="signup-name" required placeholder="Your name">
+            </div>
+            <div>
+              <label>Email <span class="required">*</span></label>
+              <input type="email" id="signup-email" required placeholder="you@example.com">
+            </div>
+          </div>
+
+          <label>DAW(s) you use <span class="required">*</span></label>
+          <div class="checkbox-group" id="daw-group">
+            <label class="checkbox-label"><input type="checkbox" value="Ableton"> Ableton</label>
+            <label class="checkbox-label"><input type="checkbox" value="Logic"> Logic</label>
+            <label class="checkbox-label"><input type="checkbox" value="Cubase"> Cubase</label>
+            <label class="checkbox-label"><input type="checkbox" value="Pro Tools"> Pro Tools</label>
+            <label class="checkbox-label"><input type="checkbox" value="Other"> Other</label>
+          </div>
+          <input type="text" id="daw-other" placeholder="Other DAW..." style="display:none">
+
+          <label>Operating system <span class="required">*</span></label>
+          <div class="checkbox-group" id="os-group">
+            <label class="checkbox-label"><input type="radio" name="os" value="Mac"> Mac</label>
+            <label class="checkbox-label"><input type="radio" name="os" value="Windows"> Windows</label>
+            <label class="checkbox-label"><input type="radio" name="os" value="Other"> Other</label>
+          </div>
+          <input type="text" id="os-other" placeholder="Other OS..." style="display:none">
+
+          <label>Music genre you mainly work in</label>
+          <input type="text" id="signup-genre" placeholder="e.g. electronic, hip-hop, rock, film scoring...">
+
+          <div class="btn-row">
+            <button type="submit" class="btn btn-primary" id="signup-btn">Sign Up & Get Download</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Download section (hidden until signup, populated dynamically) -->
+      <div class="card" id="download-card" style="display:none">
+        <h2>You're in!</h2>
+        <p class="desc">Download the plugin and follow the test protocol. When you're done, fill out the feedback forms in the tabs above.</p>
+        <div id="download-instructions"></div>
+        <a href="#" class="btn btn-primary" id="download-link" style="margin-top:16px">Download Pluginner FX</a>
+      </div>
+
+      <!-- Beta test flow guide (shown after signup) -->
+      <div class="card" id="flow-card" style="display:none">
+        <h3>How the beta test works</h3>
+        <p class="desc">The test takes about 30–45 minutes. Work through the tabs above in order:</p>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div style="display:flex; align-items:flex-start; gap:12px;">
+            <span class="entry-num" style="flex-shrink:0; margin-top:2px;">1</span>
+            <div>
+              <strong style="font-size:14px;">Read the Protocol</strong>
+              <p style="font-size:13px; color:var(--text-dim); margin:2px 0 0;">Quick overview of what to do and how the plugin works.</p>
+            </div>
+          </div>
+          <div style="display:flex; align-items:flex-start; gap:12px;">
+            <span class="entry-num" style="flex-shrink:0; margin-top:2px;">2</span>
+            <div>
+              <strong style="font-size:14px;">Free Play</strong> <span style="font-size:12px; color:var(--text-dim);">(~15 min)</span>
+              <p style="font-size:13px; color:var(--text-dim); margin:2px 0 0;">Use the plugin freely. Log the prompts you try and what happens — right here on the site.</p>
+            </div>
+          </div>
+          <div style="display:flex; align-items:flex-start; gap:12px;">
+            <span class="entry-num" style="flex-shrink:0; margin-top:2px;">3</span>
+            <div>
+              <strong style="font-size:14px;">Challenges</strong> <span style="font-size:12px; color:var(--text-dim);">(~10 min)</span>
+              <p style="font-size:13px; color:var(--text-dim); margin:2px 0 0;">Four guided prompting challenges. Log your results in the forms provided.</p>
+            </div>
+          </div>
+          <div style="display:flex; align-items:flex-start; gap:12px;">
+            <span class="entry-num" style="flex-shrink:0; margin-top:2px;">4</span>
+            <div>
+              <strong style="font-size:14px;">Survey</strong> <span style="font-size:12px; color:var(--text-dim);">(~5 min)</span>
+              <p style="font-size:13px; color:var(--text-dim); margin:2px 0 0;">Rate your experience and answer a few open questions. Hit submit and you're done.</p>
+            </div>
+          </div>
+        </div>
+        <p style="font-size:13px; color:var(--text-dim); margin-top:16px;">Everything is submitted through this site — no files to email back. Your responses are saved as you go.</p>
+      </div>
+    </div>
+
+    <!-- TAB: Protocol -->
+    <div class="tab-panel" id="panel-protocol">
+      <div class="card">
+        <h2>Beta Test Protocol</h2>
+        <p class="desc" style="font-style:italic; margin-bottom: 24px;">You type words. The plugin makes sound. That's the whole idea. Help us make it great.</p>
+
+        <div class="callout">
+          <strong>Time commitment:</strong> 30–45 minutes<br>
+          <strong>What you need:</strong> Your DAW, a stereo track, headphones/monitors<br>
+          <strong>No wrong answers.</strong> If something feels off, it's useful data.
+        </div>
+
+        <div class="callout" style="border-color: hsl(175, 70%, 42%, 0.2);">
+          <strong>About this version:</strong> This beta includes 4 effect modules (delay, reverb, saturation/distortion, filter) with 18 units total. It's a focused subset — a fuller version with many more effects is on the way. We're releasing this early to get your feedback on the core experience: the prompting, the UI, and the sound.
+        </div>
+
+        <div class="protocol-text">
+          <p>Pluginner FX is a VST/AU plugin where you describe the sound you want in plain English and it builds an effects chain for you. Type "warm tape delay" and you get a delay with analog warmth. Type "shoegaze reverb heavy distortion" and you get a wall of sound.</p>
+          <p>Your job is simple: <strong>use it like you'd use it in a real session.</strong> We want to know what feels right, what feels wrong, and what you'd expect but didn't get.</p>
+
+          <div class="section-header" style="margin-top: 24px;">The test has 3 parts</div>
+          <p><strong>1. Free Play</strong> (15 min) — Just use it. Type whatever comes to mind.<br>
+          <strong>2. Challenges</strong> (10 min) — 4 prompting challenges. You decide what to type.<br>
+          <strong>3. Quick Survey</strong> (5 min) — Fill out the feedback forms.</p>
+
+          <div class="section-header" style="margin-top: 24px;">Setup</div>
+          <p>Install the plugin (AU or VST3). Open your DAW. Insert Pluginner on any track with audio playing through it — vocals, drums, guitar, a full mix, whatever you normally work on.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Free Play -->
+    <div class="tab-panel" id="panel-freeplay">
+      <div class="card">
+        <h2>Part 1: Free Play</h2>
+        <p class="desc">Set a 15-minute timer. Use the plugin however you want. Log what you try below.</p>
+
+        <div class="callout">
+          <strong>Starting ideas if you're blank:</strong><br>
+          <em>Describe a vibe:</em> "dreamy", "aggressive"<br>
+          <em>Adjust what you hear:</em> "more reverb", "less feedback", "delay at 50%"<br>
+          <em>Just see what happens:</em> type anything that comes to mind
+        </div>
+
+        <div id="freeplay-entries"></div>
+
+        <div class="btn-row">
+          <button class="btn btn-secondary" onclick="addFreePlayEntry()">+ Add entry</button>
+          <button class="btn btn-primary" onclick="saveFreePlay()" id="save-freeplay-btn">Save entries</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Challenges -->
+    <div class="tab-panel" id="panel-challenges">
+      <!-- Challenge 1 -->
+      <div class="card">
+        <h3>Challenge 1: Describe a Sound Without Naming an Effect</h3>
+        <p class="desc">Don't say "delay" or "reverb" or "saturation". Describe what you want using vibes, textures, feelings, genres, references. Try 3–5 prompts.</p>
+        <div class="callout">
+          <em>Examples (don't use these — come up with your own):</em><br>
+          "something that sounds like it's playing in a stairwell" · "80s VHS tape" · "make it sound broken"
+        </div>
+        <div id="challenge1-entries"></div>
+        <button class="btn btn-secondary btn-small" onclick="addChallengeEntry(1)">+ Add entry</button>
+      </div>
+
+      <!-- Challenge 2 -->
+      <div class="card">
+        <h3>Challenge 2: Push It Until It Breaks</h3>
+        <p class="desc">Try contradictions, overload with descriptors, use nonsense. We want to find the limits.</p>
+        <div id="challenge2-entries"></div>
+        <button class="btn btn-secondary btn-small" onclick="addChallengeEntry(2)">+ Add entry</button>
+      </div>
+
+      <!-- Challenge 3 -->
+      <div class="card">
+        <h3>Challenge 3: Your Genre, Your Language</h3>
+        <p class="desc">Use your own musical vocabulary — slang, shorthand, genre-specific terms, artist references, the way you actually talk about sound. Try 3–5 prompts.</p>
+        <div id="challenge3-entries"></div>
+        <button class="btn btn-secondary btn-small" onclick="addChallengeEntry(3)">+ Add entry</button>
+      </div>
+
+      <!-- Challenge 4 -->
+      <div class="card">
+        <h3>Challenge 4: Make Something You'd Actually Keep</h3>
+        <p class="desc">Forget this is a test. Try to get a result you'd genuinely use on a track. If you can't get there, note what was missing.</p>
+        <div id="challenge4-entries"></div>
+        <button class="btn btn-secondary btn-small" onclick="addChallengeEntry(4)">+ Add entry</button>
+      </div>
+
+      <div class="btn-row" style="margin-bottom: 32px;">
+        <button class="btn btn-primary" onclick="saveChallenges()" id="save-challenges-btn">Save all challenges</button>
+      </div>
+    </div>
+
+    <!-- TAB: Survey -->
+    <div class="tab-panel" id="panel-survey">
+      <div class="card">
+        <h2>Quick Survey</h2>
+        <p class="desc">Rate each statement 1–5 (1 = strongly disagree, 5 = strongly agree).</p>
+
+        <div class="section-header">UX / UI / Look & Feel</div>
+        <div class="rating-row">
+          <span class="rating-label">The UI looks polished and professional</span>
+          <div class="rating-pills" data-field="ui_polished"></div>
+        </div>
+        <div class="rating-row">
+          <span class="rating-label">The layout is intuitive — I didn't need instructions</span>
+          <div class="rating-pills" data-field="ui_intuitive"></div>
+        </div>
+        <div class="rating-row">
+          <span class="rating-label">The visual feedback helps me understand what it's doing</span>
+          <div class="rating-pills" data-field="ui_visual_feedback"></div>
+        </div>
+
+        <div class="section-header">Usability & Accuracy</div>
+        <div class="rating-row">
+          <span class="rating-label">The plugin understood what I typed most of the time</span>
+          <div class="rating-pills" data-field="understood_input"></div>
+        </div>
+        <div class="rating-row">
+          <span class="rating-label">The sounds matched my expectations</span>
+          <div class="rating-pills" data-field="sounds_matched"></div>
+        </div>
+        <div class="rating-row">
+          <span class="rating-label">I could hear a clear difference between different prompts</span>
+          <div class="rating-pills" data-field="clear_difference"></div>
+        </div>
+        <div class="rating-row">
+          <span class="rating-label">The autocomplete suggestions were helpful</span>
+          <div class="rating-pills" data-field="autocomplete_helpful"></div>
+        </div>
+        <div class="rating-row">
+          <span class="rating-label">The presets were a good starting point</span>
+          <div class="rating-pills" data-field="presets_useful"></div>
+        </div>
+
+        <div class="section-header">Would You Use It?</div>
+        <div class="rating-row">
+          <span class="rating-label">I would actually use this in a real session</span>
+          <div class="rating-pills" data-field="would_use"></div>
+        </div>
+        <div class="rating-row">
+          <span class="rating-label">I would recommend this to a friend or colleague</span>
+          <div class="rating-pills" data-field="would_recommend"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Open Questions</h3>
+        <p class="desc">Write as much or as little as you want. One-word reactions are fine.</p>
+
+        <label>How does it look and feel? Anything about the UI that felt off, cluttered, or missing?</label>
+        <textarea id="q-look-feel" placeholder="Your thoughts..."></textarea>
+
+        <label>When would you reach for this plugin? What type of session or task?</label>
+        <textarea id="q-when-reach" placeholder="Your thoughts..."></textarea>
+
+        <label>Who would you recommend this to?</label>
+        <textarea id="q-who-recommend" placeholder="Producers, mixers, beginners, specific genres..."></textarea>
+
+        <label>What would make it more accurate? Any prompts that missed or felt wrong?</label>
+        <textarea id="q-more-accurate" placeholder="Your thoughts..."></textarea>
+
+        <label>What would make it more fun or inspiring to use?</label>
+        <textarea id="q-more-fun" placeholder="Your thoughts..."></textarea>
+
+        <label>What one thing would make the biggest difference if we improved it?</label>
+        <textarea id="q-biggest" placeholder="Your thoughts..."></textarea>
+
+        <label>Any bugs, crashes, or weird behavior?</label>
+        <textarea id="q-bugs" placeholder="Your thoughts..."></textarea>
+
+        <label>Would you pay for this? What would make it worth it?</label>
+        <textarea id="q-pay" placeholder="Your thoughts..."></textarea>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="saveSurvey()" id="save-survey-btn">Submit survey</button>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <p>&copy; 2026 Pluginner / Ma Tan. All rights reserved.</p>
+    </footer>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // ============================================================
+  // CONFIG — Supabase credentials (anon key is safe to expose —
+  // it can only do what RLS policies allow)
+  // ============================================================
+  const SUPABASE_URL = 'https://rdwafvmldnybnssyyrmc.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_H9kBo1dWQL_nzjCXRhE20w_1VrhCKe1';
+
+  // ============================================================
+  // Supabase client (lightweight, no SDK needed)
+  // ============================================================
+  async function supabaseInsert(table, data) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || 'Database error');
+    }
+    return res.json();
+  }
+
+  async function supabaseSelect(table, query) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      }
+    });
+    return res.json();
+  }
+
+  // ============================================================
+  // State
+  // ============================================================
+  let testerId = localStorage.getItem('pluginner_tester_id');
+  let testerName = localStorage.getItem('pluginner_tester_name');
+  const surveyRatings = {};
+
+  // ============================================================
+  // Password gate (server-side verification)
+  // ============================================================
+  async function doPasswordCheck() {
+    const val = document.getElementById('pw-input').value;
+    const btn = document.getElementById('pw-btn');
+    btn.disabled = true;
+    btn.textContent = 'Checking...';
+
+    try {
+      const res = await fetch('/api/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: val })
+      });
+
+      if (res.ok) {
+        // Server set an HTTP-only cookie — we're authenticated
+        document.getElementById('password-gate').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        if (testerId) showSignedIn();
+      } else {
+        document.getElementById('pw-error').style.display = 'block';
+        document.getElementById('pw-input').value = '';
+      }
+    } catch (err) {
+      document.getElementById('pw-error').style.display = 'block';
+      document.getElementById('pw-error').textContent = 'Connection error. Try again.';
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Enter';
+  }
+
+  document.getElementById('pw-btn').addEventListener('click', doPasswordCheck);
+  document.getElementById('pw-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') doPasswordCheck();
+  });
+
+  // Check if already authenticated (cookie persists across page loads)
+  (async function checkSession() {
+    try {
+      const res = await fetch('/api/check');
+      const data = await res.json();
+      if (data.authenticated) {
+        document.getElementById('password-gate').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        if (testerId) showSignedIn();
+      }
+    } catch (e) {
+      // Not authenticated or offline — show password gate (default)
+    }
+  })();
+
+  // ============================================================
+  // Tabs
+  // ============================================================
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ============================================================
+  // Checkbox/radio UI
+  // ============================================================
+  document.querySelectorAll('.checkbox-group').forEach(group => {
+    group.querySelectorAll('.checkbox-label').forEach(label => {
+      label.addEventListener('click', () => {
+        const input = label.querySelector('input');
+        if (input.type === 'radio') {
+          group.querySelectorAll('.checkbox-label').forEach(l => l.classList.remove('checked'));
+          label.classList.add('checked');
+          input.checked = true;
+          // Show/hide "Other" text field
+          const otherInput = input.value === 'Other'
+            ? group.id === 'daw-group' ? document.getElementById('daw-other') : document.getElementById('os-other')
+            : null;
+          if (group.id === 'os-group') {
+            document.getElementById('os-other').style.display = input.value === 'Other' ? 'block' : 'none';
+          }
+        } else {
+          input.checked = !input.checked;
+          label.classList.toggle('checked', input.checked);
+          if (input.value === 'Other' && group.id === 'daw-group') {
+            document.getElementById('daw-other').style.display = input.checked ? 'block' : 'none';
+          }
+        }
+      });
+    });
+  });
+
+  // ============================================================
+  // Rating pills
+  // ============================================================
+  document.querySelectorAll('.rating-pills').forEach(container => {
+    const field = container.dataset.field;
+    for (let i = 1; i <= 5; i++) {
+      const pill = document.createElement('div');
+      pill.className = 'rating-pill';
+      pill.textContent = i;
+      pill.addEventListener('click', () => {
+        container.querySelectorAll('.rating-pill').forEach(p => p.classList.remove('selected'));
+        pill.classList.add('selected');
+        surveyRatings[field] = i;
+      });
+      container.appendChild(pill);
+    }
+  });
+
+  // ============================================================
+  // Signup
+  // ============================================================
+  async function handleSignup(e) {
+    e.preventDefault();
+    const btn = document.getElementById('signup-btn');
+    btn.disabled = true;
+    btn.textContent = 'Signing up...';
+
+    try {
+      const name = document.getElementById('signup-name').value.trim();
+      const email = document.getElementById('signup-email').value.trim();
+      const dawCheckboxes = document.querySelectorAll('#daw-group input:checked');
+      const daws = Array.from(dawCheckboxes).map(c => c.value);
+      const dawOther = document.getElementById('daw-other').value.trim();
+      const os = document.querySelector('input[name="os"]:checked')?.value;
+      const osOther = document.getElementById('os-other').value.trim();
+      const genre = document.getElementById('signup-genre').value.trim();
+
+      if (!name || !email || daws.length === 0 || !os) {
+        showToast('Please fill in all required fields.', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Sign Up & Get Download';
+        return false;
+      }
+
+      const data = {
+        name, email, daws, os,
+        daw_other: dawOther || null,
+        os_other: osOther || null,
+        genre: genre || null
+      };
+
+      const result = await supabaseInsert('beta_testers', data);
+      testerId = result[0].id;
+      testerName = name;
+      localStorage.setItem('pluginner_tester_id', testerId);
+      localStorage.setItem('pluginner_tester_name', testerName);
+      localStorage.setItem('pluginner_tester_os', os);
+      localStorage.setItem('pluginner_tester_daws', JSON.stringify(daws));
+
+      showSignedIn();
+      showToast('Welcome, ' + name + '! You\'re in.', 'success');
+    } catch (err) {
+      if (err.message && err.message.includes('duplicate')) {
+        // Already signed up — look up by email
+        const email = document.getElementById('signup-email').value.trim();
+        const existing = await supabaseSelect('beta_testers', `email=eq.${encodeURIComponent(email)}&select=id,name`);
+        if (existing.length > 0) {
+          testerId = existing[0].id;
+          testerName = existing[0].name;
+          localStorage.setItem('pluginner_tester_id', testerId);
+          localStorage.setItem('pluginner_tester_name', testerName);
+          showSignedIn();
+          showToast('Welcome back, ' + testerName + '!', 'success');
+        } else {
+          showToast('Error: ' + err.message, 'error');
+        }
+      } else {
+        showToast('Error: ' + err.message, 'error');
+      }
+    }
+    btn.disabled = false;
+    btn.textContent = 'Sign Up & Get Download';
+    return false;
+  }
+
+  function showSignedIn() {
+    document.getElementById('signup-form').style.display = 'none';
+    document.getElementById('download-card').style.display = 'block';
+    document.getElementById('flow-card').style.display = 'block';
+    // Download link uses secure API (generates signed URL on click)
+    document.getElementById('download-link').addEventListener('click', handleDownload);
+    document.getElementById('download-link').href = '#';
+
+    // Show greeting
+    const card = document.querySelector('#panel-signup .card:first-child');
+    card.querySelector('h2').textContent = 'Welcome, ' + (testerName || 'tester') + '!';
+    card.querySelector('.desc').textContent = 'You\'re signed up. Download the plugin below and use the tabs to submit your feedback.';
+
+    // Build dynamic install instructions based on DAW + OS
+    const os = localStorage.getItem('pluginner_tester_os') || 'Mac';
+    const daws = JSON.parse(localStorage.getItem('pluginner_tester_daws') || '[]');
+    const instructionsEl = document.getElementById('download-instructions');
+
+    let html = '';
+
+    // Platform warning
+    if (os === 'Mac') {
+      html += `<div class="callout" style="border-color: hsl(175, 70%, 42%, 0.2);">
+        <strong>Installation (macOS):</strong><br>
+        1. Unzip the download<br>
+        2. Copy <code style="color:var(--accent)">.vst3</code> to <code>~/Library/Audio/Plug-Ins/VST3/</code>`;
+      if (daws.includes('Logic')) {
+        html += `<br>&nbsp;&nbsp;&nbsp;or <code style="color:var(--accent)">.component</code> to <code>~/Library/Audio/Plug-Ins/Components/</code> (required for Logic)`;
+      } else {
+        html += `<br>&nbsp;&nbsp;&nbsp;or <code style="color:var(--accent)">.component</code> to <code>~/Library/Audio/Plug-Ins/Components/</code>`;
+      }
+      html += `<br>3. Restart your DAW and scan for new plugins</div>`;
+
+      // Gatekeeper warning
+      html += `<div class="callout" style="border-color: hsl(40, 80%, 55%, 0.3); background: hsl(40, 80%, 55%, 0.04);">
+        <strong>⚠ macOS security note:</strong> The beta is not yet notarized with Apple, so macOS may block it. If that happens:<br><br>
+        <strong>Option 1:</strong> Right-click the plugin file → Open → confirm<br>
+        <strong>Option 2:</strong> Open Terminal and run:<br>
+        <code style="color:var(--accent)">xattr -cr ~/Library/Audio/Plug-Ins/VST3/PluginnerFX.vst3</code><br>
+        <code style="color:var(--accent)">xattr -cr ~/Library/Audio/Plug-Ins/Components/PluginnerFX.component</code><br><br>
+        This is normal for unsigned beta software and only needs to be done once.
+      </div>`;
+    } else if (os === 'Windows') {
+      html += `<div class="callout" style="border-color: hsl(0, 72%, 55%, 0.3); background: hsl(0, 72%, 55%, 0.04);">
+        <strong>⚠ Windows note:</strong> The beta has only been tested on macOS so far. A Windows build may be available but is <strong>untested</strong>. If you encounter issues installing or loading the plugin, please report them — it helps us prioritize Windows support.<br><br>
+        <strong>If Windows Defender blocks the plugin:</strong> Click "More info" → "Run anyway", or add an exception in Windows Security settings.
+      </div>`;
+      html += `<div class="callout">
+        <strong>Installation (Windows):</strong><br>
+        1. Unzip the download<br>
+        2. Copy <code style="color:var(--accent)">.vst3</code> to <code>C:\\Program Files\\Common Files\\VST3\\</code><br>
+        3. Restart your DAW and scan for new plugins
+      </div>`;
+    } else {
+      html += `<div class="callout" style="border-color: hsl(0, 72%, 55%, 0.3); background: hsl(0, 72%, 55%, 0.04);">
+        <strong>⚠ Platform note:</strong> The beta has only been tested on macOS so far. If you run into any issues on your platform, please report them — it helps us a lot.
+      </div>`;
+    }
+
+    // DAW-specific tips
+    const dawTips = [];
+    if (daws.includes('Ableton')) dawTips.push('<strong>Ableton Live:</strong> Tested and confirmed working. Insert PluginnerFX on any audio or return track.');
+    if (daws.includes('Logic')) dawTips.push('<strong>Logic Pro:</strong> Use the AU (.component) format. After copying, Logic should pick it up on next launch via AU Manager.');
+    if (daws.includes('Cubase')) dawTips.push('<strong>Cubase:</strong> Use VST3 format. Scan via Studio → VST Plugin Manager if it doesn\'t appear automatically.');
+    if (daws.includes('Pro Tools')) dawTips.push('<strong>Pro Tools:</strong> AAX is not yet supported. VST3 may work via a wrapper (e.g., Blue Cat\'s PatchWork) but is untested.');
+
+    if (dawTips.length > 0) {
+      html += `<div class="callout">
+        <strong>Tips for your DAW:</strong><br>
+        ${dawTips.join('<br><br>')}
+      </div>`;
+    }
+
+    // Tested note
+    html += `<p style="font-size:12px; color:var(--text-dim); opacity:0.6; margin-top:12px;">
+      Tested on: macOS (Apple Silicon), Ableton Live 12. Other DAWs and platforms — your feedback helps us expand support.
+    </p>`;
+
+    instructionsEl.innerHTML = html;
+
+    // Init form entries
+    initFreePlayEntries();
+    initChallengeEntries();
+  }
+
+  // ============================================================
+  // Free Play entries
+  // ============================================================
+  let freePlayCount = 0;
+
+  function initFreePlayEntries() {
+    for (let i = 0; i < 3; i++) addFreePlayEntry();
+  }
+
+  function addFreePlayEntry() {
+    freePlayCount++;
+    const container = document.getElementById('freeplay-entries');
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.dataset.index = freePlayCount;
+    entry.innerHTML = `
+      <div class="entry-header">
+        <span class="entry-num">#${freePlayCount}</span>
+        <button class="entry-remove" onclick="this.closest('.log-entry').remove()" title="Remove">&times;</button>
+      </div>
+      <label>Prompt you typed</label>
+      <input type="text" class="fp-prompt" placeholder='e.g. "warm tape delay"'>
+      <label>What happened</label>
+      <input type="text" class="fp-result" placeholder="e.g. got a nice analog delay with warmth">
+      <div class="form-grid">
+        <div>
+          <label>Match?</label>
+          <div class="match-pills fp-match">
+            <div class="match-pill" data-val="good" onclick="selectMatch(this)">👍</div>
+            <div class="match-pill" data-val="meh" onclick="selectMatch(this)">🤷</div>
+            <div class="match-pill" data-val="bad" onclick="selectMatch(this)">👎</div>
+          </div>
+        </div>
+        <div>
+          <label>Notes</label>
+          <input type="text" class="fp-notes" placeholder="Optional">
+        </div>
+      </div>
+    `;
+    container.appendChild(entry);
+  }
+
+  function selectMatch(el) {
+    el.parentElement.querySelectorAll('.match-pill').forEach(p => p.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  async function saveFreePlay() {
+    if (!testerId) { showToast('Please sign up first.', 'error'); return; }
+    const btn = document.getElementById('save-freeplay-btn');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    try {
+      const entries = document.querySelectorAll('#freeplay-entries .log-entry');
+      const rows = [];
+      entries.forEach(entry => {
+        const prompt = entry.querySelector('.fp-prompt').value.trim();
+        if (!prompt) return;
+        rows.push({
+          tester_id: testerId,
+          prompt_typed: prompt,
+          what_happened: entry.querySelector('.fp-result').value.trim() || null,
+          match_rating: entry.querySelector('.fp-match .match-pill.selected')?.dataset.val || null,
+          notes: entry.querySelector('.fp-notes').value.trim() || null
+        });
+      });
+
+      if (rows.length === 0) { showToast('Add at least one entry with a prompt.', 'error'); }
+      else {
+        for (const row of rows) await supabaseInsert('free_play_log', row);
+        showToast(`Saved ${rows.length} free play entries!`, 'success');
+      }
+    } catch (err) {
+      showToast('Error saving: ' + err.message, 'error');
+    }
+    btn.disabled = false;
+    btn.textContent = 'Save entries';
+  }
+
+  // ============================================================
+  // Challenge entries
+  // ============================================================
+  const challengeCounts = { 1: 0, 2: 0, 3: 0, 4: 0 };
+
+  function initChallengeEntries() {
+    for (let c = 1; c <= 4; c++) {
+      for (let i = 0; i < 2; i++) addChallengeEntry(c);
+    }
+  }
+
+  function addChallengeEntry(challengeNum) {
+    challengeCounts[challengeNum]++;
+    const container = document.getElementById(`challenge${challengeNum}-entries`);
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.dataset.challenge = challengeNum;
+    entry.innerHTML = `
+      <div class="entry-header">
+        <span class="entry-num">${challengeNum}.${challengeCounts[challengeNum]}</span>
+        <button class="entry-remove" onclick="this.closest('.log-entry').remove()" title="Remove">&times;</button>
+      </div>
+      <label>What you typed</label>
+      <input type="text" class="ch-prompt" placeholder="Your prompt...">
+      <div class="form-grid">
+        <div>
+          <label>What you expected</label>
+          <input type="text" class="ch-expected" placeholder="Expected result">
+        </div>
+        <div>
+          <label>What actually happened</label>
+          <input type="text" class="ch-happened" placeholder="Actual result">
+        </div>
+      </div>
+      <div class="form-grid">
+        <div>
+          <label>Rating (1-5)</label>
+          <select class="ch-rating">
+            <option value="">—</option>
+            <option value="1">1</option><option value="2">2</option>
+            <option value="3">3</option><option value="4">4</option><option value="5">5</option>
+          </select>
+        </div>
+        <div>
+          <label>Notes</label>
+          <input type="text" class="ch-notes" placeholder="Optional">
+        </div>
+      </div>
+    `;
+    container.appendChild(entry);
+  }
+
+  async function saveChallenges() {
+    if (!testerId) { showToast('Please sign up first.', 'error'); return; }
+    const btn = document.getElementById('save-challenges-btn');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    try {
+      const rows = [];
+      for (let c = 1; c <= 4; c++) {
+        const entries = document.querySelectorAll(`#challenge${c}-entries .log-entry`);
+        entries.forEach(entry => {
+          const prompt = entry.querySelector('.ch-prompt').value.trim();
+          if (!prompt) return;
+          rows.push({
+            tester_id: testerId,
+            challenge_number: c,
+            prompt_typed: prompt,
+            what_expected: entry.querySelector('.ch-expected').value.trim() || null,
+            what_happened: entry.querySelector('.ch-happened').value.trim() || null,
+            rating: entry.querySelector('.ch-rating').value ? parseInt(entry.querySelector('.ch-rating').value) : null,
+            notes: entry.querySelector('.ch-notes').value.trim() || null
+          });
+        });
+      }
+
+      if (rows.length === 0) { showToast('Add at least one challenge entry.', 'error'); }
+      else {
+        for (const row of rows) await supabaseInsert('challenge_log', row);
+        showToast(`Saved ${rows.length} challenge entries!`, 'success');
+      }
+    } catch (err) {
+      showToast('Error saving: ' + err.message, 'error');
+    }
+    btn.disabled = false;
+    btn.textContent = 'Save all challenges';
+  }
+
+  // ============================================================
+  // Survey
+  // ============================================================
+  async function saveSurvey() {
+    if (!testerId) { showToast('Please sign up first.', 'error'); return; }
+    const btn = document.getElementById('save-survey-btn');
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+
+    try {
+      // Save ratings
+      await supabaseInsert('survey_ratings', {
+        tester_id: testerId,
+        ...surveyRatings
+      });
+
+      // Save open questions
+      await supabaseInsert('survey_open', {
+        tester_id: testerId,
+        look_and_feel: document.getElementById('q-look-feel').value.trim() || null,
+        when_reach_for: document.getElementById('q-when-reach').value.trim() || null,
+        who_recommend: document.getElementById('q-who-recommend').value.trim() || null,
+        more_accurate: document.getElementById('q-more-accurate').value.trim() || null,
+        more_fun: document.getElementById('q-more-fun').value.trim() || null,
+        biggest_improvement: document.getElementById('q-biggest').value.trim() || null,
+        bugs: document.getElementById('q-bugs').value.trim() || null,
+        would_pay: document.getElementById('q-pay').value.trim() || null,
+      });
+
+      showToast('Survey submitted! Thank you!', 'success');
+    } catch (err) {
+      showToast('Error: ' + err.message, 'error');
+    }
+    btn.disabled = false;
+    btn.textContent = 'Submit survey';
+  }
+
+  // ============================================================
+  // Toast
+  // ============================================================
+  // ============================================================
+  // Secure download (fetches signed URL from server)
+  // ============================================================
+  async function handleDownload(e) {
+    e.preventDefault();
+    const link = document.getElementById('download-link');
+    link.textContent = 'Generating download link...';
+
+    try {
+      const res = await fetch('/api/download');
+      if (!res.ok) {
+        const err = await res.json();
+        showToast(err.error || 'Download failed. Try refreshing the page.', 'error');
+        link.textContent = 'Download Pluginner FX';
+        return;
+      }
+      const data = await res.json();
+      // Redirect to signed URL
+      window.location.href = data.url;
+      link.textContent = 'Download Pluginner FX';
+    } catch (err) {
+      showToast('Download failed. Try again.', 'error');
+      link.textContent = 'Download Pluginner FX';
+    }
+  }
+
+  function showToast(msg, type = '') {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.className = 'toast show ' + type;
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => toast.classList.remove('show'), 3500);
+  }
+</script>
+</body>
+</html>
