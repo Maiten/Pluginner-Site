@@ -416,6 +416,16 @@
         <h2>Join the Beta</h2>
         <p class="desc">Sign up to get the download link and access the feedback forms.</p>
 
+        <!-- Resume session -->
+        <div id="resume-section" style="margin-bottom:20px; padding:16px; border-radius:12px; border:1px solid var(--border); background:var(--bg-surface);">
+          <p style="font-size:13px; color:var(--text-dim); margin:0 0 10px;">Already started the test?</p>
+          <div style="display:flex; gap:8px;">
+            <input type="email" id="resume-email" placeholder="Enter your email to resume" style="flex:1;">
+            <button type="button" class="btn btn-secondary" id="resume-btn" onclick="handleResume()">Resume</button>
+          </div>
+          <p id="resume-error" style="display:none; color:hsl(0,72%,55%); font-size:12px; margin:8px 0 0;">Email not found. Please sign up below.</p>
+        </div>
+
         <form id="signup-form" onsubmit="return handleSignup(event)">
           <div class="form-grid">
             <div>
@@ -786,7 +796,10 @@
       if (data.authenticated) {
         document.getElementById('password-gate').style.display = 'none';
         document.getElementById('app').style.display = 'block';
-        if (testerId) showSignedIn();
+        if (testerId) {
+          showSignedIn();
+          loadAutoSave();
+        }
       }
     } catch (e) {
       // Not authenticated or offline — show password gate (default)
@@ -912,14 +925,17 @@
       if (err.message && err.message.includes('duplicate')) {
         // Already signed up — look up by email
         const email = document.getElementById('signup-email').value.trim();
-        const existing = await supabaseSelect('beta_testers', `email=eq.${encodeURIComponent(email)}&select=id,name`);
+        const existing = await supabaseSelect('beta_testers', `email=eq.${encodeURIComponent(email)}&select=id,name,daws,os`);
         if (existing.length > 0) {
           testerId = existing[0].id;
           testerName = existing[0].name;
           localStorage.setItem('pluginner_tester_id', testerId);
           localStorage.setItem('pluginner_tester_name', testerName);
+          localStorage.setItem('pluginner_tester_os', existing[0].os || 'Mac');
+          localStorage.setItem('pluginner_tester_daws', JSON.stringify(existing[0].daws || []));
           showSignedIn();
-          showToast('Welcome back, ' + testerName + '!', 'success');
+          await loadPreviousAnswers();
+          showToast('Welcome back, ' + testerName + '! Your previous answers have been loaded.', 'success');
         } else {
           showToast('Error: ' + err.message, 'error');
         }
@@ -934,6 +950,7 @@
 
   function showSignedIn() {
     document.getElementById('signup-form').style.display = 'none';
+    document.getElementById('resume-section').style.display = 'none';
     document.getElementById('download-card').style.display = 'block';
     document.getElementById('flow-card').style.display = 'block';
 
@@ -1227,8 +1244,274 @@
   }
 
   // ============================================================
-  // Toast
+  // Resume session
   // ============================================================
+  async function handleResume() {
+    const email = document.getElementById('resume-email').value.trim();
+    if (!email) { showToast('Please enter your email.', 'error'); return; }
+
+    const btn = document.getElementById('resume-btn');
+    btn.disabled = true;
+    btn.textContent = 'Looking up...';
+    document.getElementById('resume-error').style.display = 'none';
+
+    try {
+      const results = await supabaseSelect('beta_testers', `email=eq.${encodeURIComponent(email)}&select=id,name,daws,os`);
+      if (results.length === 0) {
+        document.getElementById('resume-error').style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Resume';
+        return;
+      }
+
+      const tester = results[0];
+      testerId = tester.id;
+      testerName = tester.name;
+      localStorage.setItem('pluginner_tester_id', testerId);
+      localStorage.setItem('pluginner_tester_name', testerName);
+      localStorage.setItem('pluginner_tester_os', tester.os || 'Mac');
+      localStorage.setItem('pluginner_tester_daws', JSON.stringify(tester.daws || []));
+
+      showSignedIn();
+      await loadPreviousAnswers();
+      showToast('Welcome back, ' + testerName + '! Your previous answers have been loaded.', 'success');
+    } catch (err) {
+      showToast('Error: ' + err.message, 'error');
+    }
+    btn.disabled = false;
+    btn.textContent = 'Resume';
+  }
+
+  async function loadPreviousAnswers() {
+    try {
+      // Load free play entries
+      const fpRows = await supabaseSelect('free_play_log', `tester_id=eq.${testerId}&select=*&order=created_at.asc`);
+      if (fpRows.length > 0) {
+        document.getElementById('freeplay-entries').innerHTML = '';
+        freePlayCount = 0;
+        fpRows.forEach(row => {
+          addFreePlayEntry();
+          const entries = document.querySelectorAll('#freeplay-entries .log-entry');
+          const entry = entries[entries.length - 1];
+          entry.querySelector('.fp-prompt').value = row.prompt_typed || '';
+          entry.querySelector('.fp-result').value = row.what_happened || '';
+          entry.querySelector('.fp-notes').value = row.notes || '';
+          if (row.match_rating) {
+            const pill = entry.querySelector(`.fp-match .match-pill[data-val="${row.match_rating}"]`);
+            if (pill) { pill.classList.add('selected'); }
+          }
+        });
+      }
+
+      // Load challenge entries
+      const chRows = await supabaseSelect('challenge_log', `tester_id=eq.${testerId}&select=*&order=challenge_number.asc,created_at.asc`);
+      if (chRows.length > 0) {
+        // Clear existing entries per challenge
+        for (let c = 1; c <= 4; c++) {
+          document.getElementById(`challenge${c}-entries`).innerHTML = '';
+          challengeCounts[c] = 0;
+        }
+        chRows.forEach(row => {
+          addChallengeEntry(row.challenge_number);
+          const entries = document.querySelectorAll(`#challenge${row.challenge_number}-entries .log-entry`);
+          const entry = entries[entries.length - 1];
+          entry.querySelector('.ch-prompt').value = row.prompt_typed || '';
+          entry.querySelector('.ch-expected').value = row.what_expected || '';
+          entry.querySelector('.ch-happened').value = row.what_happened || '';
+          if (row.rating) entry.querySelector('.ch-rating').value = row.rating;
+          entry.querySelector('.ch-notes').value = row.notes || '';
+        });
+      }
+
+      // Load survey ratings
+      const srRows = await supabaseSelect('survey_ratings', `tester_id=eq.${testerId}&select=*&limit=1&order=created_at.desc`);
+      if (srRows.length > 0) {
+        const sr = srRows[0];
+        Object.keys(sr).forEach(key => {
+          if (key === 'id' || key === 'created_at' || key === 'tester_id') return;
+          if (sr[key] != null) {
+            surveyRatings[key] = sr[key];
+            const container = document.querySelector(`.rating-pills[data-field="${key}"]`);
+            if (container) {
+              const pill = container.children[sr[key] - 1];
+              if (pill) pill.classList.add('selected');
+            }
+          }
+        });
+      }
+
+      // Load survey open
+      const soRows = await supabaseSelect('survey_open', `tester_id=eq.${testerId}&select=*&limit=1&order=created_at.desc`);
+      if (soRows.length > 0) {
+        const so = soRows[0];
+        const fieldMap = {
+          look_and_feel: 'q-look-feel',
+          when_reach_for: 'q-when-reach',
+          who_recommend: 'q-who-recommend',
+          more_accurate: 'q-more-accurate',
+          more_fun: 'q-more-fun',
+          biggest_improvement: 'q-biggest',
+          bugs: 'q-bugs',
+          would_pay: 'q-pay'
+        };
+        Object.entries(fieldMap).forEach(([dbCol, elId]) => {
+          if (so[dbCol]) document.getElementById(elId).value = so[dbCol];
+        });
+      }
+    } catch (err) {
+      console.error('Error loading previous answers:', err);
+    }
+  }
+
+  // ============================================================
+  // Auto-save (debounced, saves to localStorage every 5s on change)
+  // ============================================================
+  let autoSaveTimer = null;
+  let autoSaveDirty = false;
+
+  function markDirty() {
+    autoSaveDirty = true;
+    if (!autoSaveTimer) {
+      autoSaveTimer = setTimeout(autoSaveToLocal, 5000);
+    }
+  }
+
+  function autoSaveToLocal() {
+    autoSaveTimer = null;
+    if (!autoSaveDirty) return;
+    autoSaveDirty = false;
+
+    try {
+      const state = {};
+
+      // Free play
+      const fpEntries = [];
+      document.querySelectorAll('#freeplay-entries .log-entry').forEach(entry => {
+        fpEntries.push({
+          prompt: entry.querySelector('.fp-prompt').value,
+          result: entry.querySelector('.fp-result').value,
+          match: entry.querySelector('.fp-match .match-pill.selected')?.dataset.val || '',
+          notes: entry.querySelector('.fp-notes').value
+        });
+      });
+      state.freeplay = fpEntries;
+
+      // Challenges
+      state.challenges = {};
+      for (let c = 1; c <= 4; c++) {
+        const chEntries = [];
+        document.querySelectorAll(`#challenge${c}-entries .log-entry`).forEach(entry => {
+          chEntries.push({
+            prompt: entry.querySelector('.ch-prompt').value,
+            expected: entry.querySelector('.ch-expected').value,
+            happened: entry.querySelector('.ch-happened').value,
+            rating: entry.querySelector('.ch-rating').value,
+            notes: entry.querySelector('.ch-notes').value
+          });
+        });
+        state.challenges[c] = chEntries;
+      }
+
+      // Survey ratings
+      state.surveyRatings = { ...surveyRatings };
+
+      // Survey open
+      state.surveyOpen = {};
+      ['q-look-feel','q-when-reach','q-who-recommend','q-more-accurate','q-more-fun','q-biggest','q-bugs','q-pay'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) state.surveyOpen[id] = el.value;
+      });
+
+      localStorage.setItem('pluginner_autosave', JSON.stringify(state));
+    } catch (e) {
+      console.error('Auto-save error:', e);
+    }
+  }
+
+  function loadAutoSave() {
+    try {
+      const raw = localStorage.getItem('pluginner_autosave');
+      if (!raw) return;
+      const state = JSON.parse(raw);
+
+      // Free play
+      if (state.freeplay && state.freeplay.length > 0) {
+        document.getElementById('freeplay-entries').innerHTML = '';
+        freePlayCount = 0;
+        state.freeplay.forEach(row => {
+          addFreePlayEntry();
+          const entries = document.querySelectorAll('#freeplay-entries .log-entry');
+          const entry = entries[entries.length - 1];
+          entry.querySelector('.fp-prompt').value = row.prompt || '';
+          entry.querySelector('.fp-result').value = row.result || '';
+          entry.querySelector('.fp-notes').value = row.notes || '';
+          if (row.match) {
+            const pill = entry.querySelector(`.fp-match .match-pill[data-val="${row.match}"]`);
+            if (pill) pill.classList.add('selected');
+          }
+        });
+      }
+
+      // Challenges
+      if (state.challenges) {
+        for (let c = 1; c <= 4; c++) {
+          const chData = state.challenges[c];
+          if (chData && chData.length > 0) {
+            document.getElementById(`challenge${c}-entries`).innerHTML = '';
+            challengeCounts[c] = 0;
+            chData.forEach(row => {
+              addChallengeEntry(c);
+              const entries = document.querySelectorAll(`#challenge${c}-entries .log-entry`);
+              const entry = entries[entries.length - 1];
+              entry.querySelector('.ch-prompt').value = row.prompt || '';
+              entry.querySelector('.ch-expected').value = row.expected || '';
+              entry.querySelector('.ch-happened').value = row.happened || '';
+              if (row.rating) entry.querySelector('.ch-rating').value = row.rating;
+              entry.querySelector('.ch-notes').value = row.notes || '';
+            });
+          }
+        }
+      }
+
+      // Survey ratings
+      if (state.surveyRatings) {
+        Object.entries(state.surveyRatings).forEach(([key, val]) => {
+          surveyRatings[key] = val;
+          const container = document.querySelector(`.rating-pills[data-field="${key}"]`);
+          if (container && container.children[val - 1]) {
+            container.children[val - 1].classList.add('selected');
+          }
+        });
+      }
+
+      // Survey open
+      if (state.surveyOpen) {
+        Object.entries(state.surveyOpen).forEach(([id, val]) => {
+          const el = document.getElementById(id);
+          if (el) el.value = val;
+        });
+      }
+    } catch (e) {
+      console.error('Auto-save load error:', e);
+    }
+  }
+
+  // Attach auto-save listeners to all form fields
+  document.addEventListener('input', (e) => {
+    if (e.target.closest('#freeplay-entries') || e.target.closest('[id^="challenge"]')
+        || e.target.closest('#panel-survey') || e.target.tagName === 'TEXTAREA') {
+      markDirty();
+    }
+  });
+  document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('match-pill') || e.target.classList.contains('rating-pill')) {
+      markDirty();
+    }
+  });
+
+  // Load auto-saved data on page load (after entries are initialized)
+  loadAutoSave();
+
   // ============================================================
   // Secure download (fetches signed URL from server)
   // ============================================================
