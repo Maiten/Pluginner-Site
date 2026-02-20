@@ -76,7 +76,7 @@ In Vercel → **Settings** → **Environment Variables**, add:
 
 | Variable | Value |
 |----------|-------|
-| `BETA_PASSWORD` | `90210` |
+| `BETA_PASSWORD` | *(set a strong secret value; do not commit it)* |
 | `SUPABASE_URL` | `https://rdwafvmldnybnssyyrmc.supabase.co` |
 | `SUPABASE_SERVICE_KEY` | *(your service_role key from Supabase)* |
 | `DOWNLOAD_FILENAME` | `PluginnerFX-beta.zip` |

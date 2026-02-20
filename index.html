@@ -118,12 +118,8 @@
       box-shadow: 0 1px 4px hsl(220, 18%, 4%, 0.4);
     }
     .tab.locked-tab {
-      opacity: 0.35;
+      opacity: 0.45;
       cursor: not-allowed;
-    }
-    @keyframes pulse-tab {
-      0%, 100% { background: transparent; }
-      50% { background: var(--accent); color: var(--bg); }
     }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
@@ -416,12 +412,11 @@
         <h2>Join the Beta</h2>
         <p class="desc">Sign up to get the download link and access the feedback forms.</p>
 
-        <!-- Resume session -->
         <div id="resume-section" style="margin-bottom:20px; padding:16px; border-radius:12px; border:1px solid var(--border); background:var(--bg-surface);">
           <p style="font-size:13px; color:var(--text-dim); margin:0 0 10px;">Already started the test?</p>
           <div style="display:flex; gap:8px;">
             <input type="email" id="resume-email" placeholder="Enter your email to resume" style="flex:1; margin-bottom:0;">
-            <button type="button" class="btn btn-secondary" id="resume-btn">Resume</button>
+            <button type="button" class="btn btn-secondary" id="resume-btn" onclick="handleResume()">Resume</button>
           </div>
           <p id="resume-error" style="display:none; color:hsl(0,72%,55%); font-size:12px; margin:8px 0 0;">Email not found. Please sign up below.</p>
         </div>
@@ -742,20 +737,6 @@
     return res.json();
   }
 
-  async function supabaseDelete(table, query) {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
-      method: 'DELETE',
-      headers: {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-      }
-    });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.message || 'Delete error');
-    }
-  }
-
   // ============================================================
   // State
   // ============================================================
@@ -783,7 +764,11 @@
         // Server set an HTTP-only cookie — we're authenticated
         document.getElementById('password-gate').style.display = 'none';
         document.getElementById('app').style.display = 'block';
-        if (testerId) showSignedIn();
+        if (testerId) {
+          showSignedIn();
+          await loadPreviousAnswers();
+          loadAutoSave();
+        }
       } else {
         document.getElementById('pw-error').style.display = 'block';
         document.getElementById('pw-input').value = '';
@@ -812,6 +797,7 @@
         document.getElementById('app').style.display = 'block';
         if (testerId) {
           showSignedIn();
+          await loadPreviousAnswers();
           loadAutoSave();
         }
       }
@@ -825,25 +811,12 @@
   // ============================================================
   document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => {
-      if (tab.disabled) {
-        showToast('Please complete sign up first to unlock this section.', 'error');
-        // Flash the signup tab
-        const signupTab = document.querySelector('.tab[data-tab="signup"]');
-        signupTab.style.animation = 'none';
-        signupTab.offsetHeight; // reflow
-        signupTab.style.animation = 'pulse-tab 0.6s ease';
-        return;
-      }
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
       tab.classList.add('active');
       document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
     });
   });
-
-  // Init empty form entries on page load (4 free play, 2 per challenge)
-  initFreePlayEntries();
-  initChallengeEntries();
 
   // ============================================================
   // Checkbox/radio UI
@@ -887,6 +860,7 @@
         container.querySelectorAll('.rating-pill').forEach(p => p.classList.remove('selected'));
         pill.classList.add('selected');
         surveyRatings[field] = i;
+        markDirty();
       });
       container.appendChild(pill);
     }
@@ -926,7 +900,6 @@
       };
 
       const result = await supabaseInsert('beta_testers', data);
-      if (!result || !result[0]) { showToast('Signup failed. Try again.', 'error'); btn.disabled = false; btn.textContent = 'Sign Up & Get Download'; return false; }
       testerId = result[0].id;
       testerName = name;
       localStorage.setItem('pluginner_tester_id', testerId);
@@ -950,6 +923,7 @@
           localStorage.setItem('pluginner_tester_daws', JSON.stringify(existing[0].daws || []));
           showSignedIn();
           await loadPreviousAnswers();
+          loadAutoSave();
           showToast('Welcome back, ' + testerName + '! Your previous answers have been loaded.', 'success');
         } else {
           showToast('Error: ' + err.message, 'error');
@@ -968,8 +942,6 @@
     document.getElementById('resume-section').style.display = 'none';
     document.getElementById('download-card').style.display = 'block';
     document.getElementById('flow-card').style.display = 'block';
-
-    // Unlock tabs
     document.querySelectorAll('.locked-tab').forEach(tab => {
       tab.disabled = false;
       tab.classList.remove('locked-tab');
@@ -1050,6 +1022,15 @@
 
     instructionsEl.innerHTML = html;
 
+    // Init form entries
+    document.getElementById('freeplay-entries').innerHTML = '';
+    freePlayCount = 0;
+    for (let c = 1; c <= 4; c++) {
+      document.getElementById(`challenge${c}-entries`).innerHTML = '';
+      challengeCounts[c] = 0;
+    }
+    initFreePlayEntries();
+    initChallengeEntries();
   }
 
   // ============================================================
@@ -1058,7 +1039,7 @@
   let freePlayCount = 0;
 
   function initFreePlayEntries() {
-    for (let i = 0; i < 4; i++) addFreePlayEntry();
+    for (let i = 0; i < 3; i++) addFreePlayEntry();
   }
 
   function addFreePlayEntry() {
@@ -1097,6 +1078,7 @@
   function selectMatch(el) {
     el.parentElement.querySelectorAll('.match-pill').forEach(p => p.classList.remove('selected'));
     el.classList.add('selected');
+    markDirty();
   }
 
   async function saveFreePlay() {
@@ -1122,8 +1104,6 @@
 
       if (rows.length === 0) { showToast('Add at least one entry with a prompt.', 'error'); }
       else {
-        // Delete old entries before inserting (prevents duplicates on re-save)
-        await supabaseDelete('free_play_log', `tester_id=eq.${testerId}`);
         for (const row of rows) await supabaseInsert('free_play_log', row);
         showToast(`Saved ${rows.length} free play entries!`, 'success');
       }
@@ -1213,8 +1193,6 @@
 
       if (rows.length === 0) { showToast('Add at least one challenge entry.', 'error'); }
       else {
-        // Delete old entries before inserting (prevents duplicates on re-save)
-        await supabaseDelete('challenge_log', `tester_id=eq.${testerId}`);
         for (const row of rows) await supabaseInsert('challenge_log', row);
         showToast(`Saved ${rows.length} challenge entries!`, 'success');
       }
@@ -1235,10 +1213,6 @@
     btn.textContent = 'Submitting...';
 
     try {
-      // Delete old survey data before inserting (prevents duplicates on re-submit)
-      await supabaseDelete('survey_ratings', `tester_id=eq.${testerId}`);
-      await supabaseDelete('survey_open', `tester_id=eq.${testerId}`);
-
       // Save ratings
       await supabaseInsert('survey_ratings', {
         tester_id: testerId,
@@ -1267,7 +1241,7 @@
   }
 
   // ============================================================
-  // Resume session
+  // Resume + restore
   // ============================================================
   async function handleResume() {
     const email = document.getElementById('resume-email').value.trim();
@@ -1280,7 +1254,7 @@
 
     try {
       const results = await supabaseSelect('beta_testers', `email=eq.${encodeURIComponent(email)}&select=id,name,daws,os`);
-      if (results.length === 0) {
+      if (!Array.isArray(results) || results.length === 0) {
         document.getElementById('resume-error').style.display = 'block';
         btn.disabled = false;
         btn.textContent = 'Resume';
@@ -1297,19 +1271,32 @@
 
       showSignedIn();
       await loadPreviousAnswers();
+      loadAutoSave();
       showToast('Welcome back, ' + testerName + '! Your previous answers have been loaded.', 'success');
     } catch (err) {
       showToast('Error: ' + err.message, 'error');
     }
+
     btn.disabled = false;
     btn.textContent = 'Resume';
   }
 
+  function resetSurveyUI() {
+    Object.keys(surveyRatings).forEach(key => delete surveyRatings[key]);
+    document.querySelectorAll('.rating-pill').forEach(pill => pill.classList.remove('selected'));
+    ['q-look-feel', 'q-when-reach', 'q-who-recommend', 'q-more-accurate', 'q-more-fun', 'q-biggest', 'q-bugs', 'q-pay'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+  }
+
   async function loadPreviousAnswers() {
+    if (!testerId) return;
+
     try {
-      // Load free play entries
+      // Free play
       const fpRows = await supabaseSelect('free_play_log', `tester_id=eq.${testerId}&select=*&order=created_at.asc`);
-      if (fpRows.length > 0) {
+      if (Array.isArray(fpRows) && fpRows.length > 0) {
         document.getElementById('freeplay-entries').innerHTML = '';
         freePlayCount = 0;
         fpRows.forEach(row => {
@@ -1321,15 +1308,14 @@
           entry.querySelector('.fp-notes').value = row.notes || '';
           if (row.match_rating) {
             const pill = entry.querySelector(`.fp-match .match-pill[data-val="${row.match_rating}"]`);
-            if (pill) { pill.classList.add('selected'); }
+            if (pill) pill.classList.add('selected');
           }
         });
       }
 
-      // Load challenge entries
+      // Challenges
       const chRows = await supabaseSelect('challenge_log', `tester_id=eq.${testerId}&select=*&order=challenge_number.asc,created_at.asc`);
-      if (chRows.length > 0) {
-        // Clear existing entries per challenge
+      if (Array.isArray(chRows) && chRows.length > 0) {
         for (let c = 1; c <= 4; c++) {
           document.getElementById(`challenge${c}-entries`).innerHTML = '';
           challengeCounts[c] = 0;
@@ -1346,26 +1332,26 @@
         });
       }
 
-      // Load survey ratings
+      // Survey
+      resetSurveyUI();
+
       const srRows = await supabaseSelect('survey_ratings', `tester_id=eq.${testerId}&select=*&limit=1&order=created_at.desc`);
-      if (srRows.length > 0) {
+      if (Array.isArray(srRows) && srRows.length > 0) {
         const sr = srRows[0];
         Object.keys(sr).forEach(key => {
           if (key === 'id' || key === 'created_at' || key === 'tester_id') return;
           if (sr[key] != null) {
             surveyRatings[key] = sr[key];
             const container = document.querySelector(`.rating-pills[data-field="${key}"]`);
-            if (container) {
-              const pill = container.children[sr[key] - 1];
-              if (pill) pill.classList.add('selected');
+            if (container && container.children[sr[key] - 1]) {
+              container.children[sr[key] - 1].classList.add('selected');
             }
           }
         });
       }
 
-      // Load survey open
       const soRows = await supabaseSelect('survey_open', `tester_id=eq.${testerId}&select=*&limit=1&order=created_at.desc`);
-      if (soRows.length > 0) {
+      if (Array.isArray(soRows) && soRows.length > 0) {
         const so = soRows[0];
         const fieldMap = {
           look_and_feel: 'q-look-feel',
@@ -1387,10 +1373,14 @@
   }
 
   // ============================================================
-  // Auto-save (debounced, saves to localStorage every 5s on change)
+  // Auto-save (local)
   // ============================================================
   let autoSaveTimer = null;
   let autoSaveDirty = false;
+
+  function getAutoSaveKey() {
+    return testerId ? `pluginner_autosave_${testerId}` : null;
+  }
 
   function markDirty() {
     autoSaveDirty = true;
@@ -1401,30 +1391,27 @@
 
   function autoSaveToLocal() {
     autoSaveTimer = null;
-    if (!autoSaveDirty) return;
+    if (!autoSaveDirty || !testerId) return;
     autoSaveDirty = false;
 
     try {
       const state = {};
 
-      // Free play
-      const fpEntries = [];
+      state.freeplay = [];
       document.querySelectorAll('#freeplay-entries .log-entry').forEach(entry => {
-        fpEntries.push({
+        state.freeplay.push({
           prompt: entry.querySelector('.fp-prompt').value,
           result: entry.querySelector('.fp-result').value,
           match: entry.querySelector('.fp-match .match-pill.selected')?.dataset.val || '',
           notes: entry.querySelector('.fp-notes').value
         });
       });
-      state.freeplay = fpEntries;
 
-      // Challenges
       state.challenges = {};
       for (let c = 1; c <= 4; c++) {
-        const chEntries = [];
+        state.challenges[c] = [];
         document.querySelectorAll(`#challenge${c}-entries .log-entry`).forEach(entry => {
-          chEntries.push({
+          state.challenges[c].push({
             prompt: entry.querySelector('.ch-prompt').value,
             expected: entry.querySelector('.ch-expected').value,
             happened: entry.querySelector('.ch-happened').value,
@@ -1432,20 +1419,17 @@
             notes: entry.querySelector('.ch-notes').value
           });
         });
-        state.challenges[c] = chEntries;
       }
 
-      // Survey ratings
       state.surveyRatings = { ...surveyRatings };
-
-      // Survey open
       state.surveyOpen = {};
-      ['q-look-feel','q-when-reach','q-who-recommend','q-more-accurate','q-more-fun','q-biggest','q-bugs','q-pay'].forEach(id => {
+      ['q-look-feel', 'q-when-reach', 'q-who-recommend', 'q-more-accurate', 'q-more-fun', 'q-biggest', 'q-bugs', 'q-pay'].forEach(id => {
         const el = document.getElementById(id);
         if (el) state.surveyOpen[id] = el.value;
       });
 
-      localStorage.setItem('pluginner_autosave', JSON.stringify(state));
+      const key = getAutoSaveKey();
+      if (key) localStorage.setItem(key, JSON.stringify(state));
     } catch (e) {
       console.error('Auto-save error:', e);
     }
@@ -1453,11 +1437,13 @@
 
   function loadAutoSave() {
     try {
-      const raw = localStorage.getItem('pluginner_autosave');
+      const key = getAutoSaveKey();
+      if (!key) return;
+
+      const raw = localStorage.getItem(key);
       if (!raw) return;
       const state = JSON.parse(raw);
 
-      // Free play
       if (state.freeplay && state.freeplay.length > 0) {
         document.getElementById('freeplay-entries').innerHTML = '';
         freePlayCount = 0;
@@ -1475,7 +1461,6 @@
         });
       }
 
-      // Challenges
       if (state.challenges) {
         for (let c = 1; c <= 4; c++) {
           const chData = state.challenges[c];
@@ -1496,18 +1481,18 @@
         }
       }
 
-      // Survey ratings
       if (state.surveyRatings) {
-        Object.entries(state.surveyRatings).forEach(([key, val]) => {
-          surveyRatings[key] = val;
-          const container = document.querySelector(`.rating-pills[data-field="${key}"]`);
+        Object.keys(surveyRatings).forEach(keyName => delete surveyRatings[keyName]);
+        document.querySelectorAll('.rating-pill').forEach(pill => pill.classList.remove('selected'));
+        Object.entries(state.surveyRatings).forEach(([keyName, val]) => {
+          surveyRatings[keyName] = val;
+          const container = document.querySelector(`.rating-pills[data-field="${keyName}"]`);
           if (container && container.children[val - 1]) {
             container.children[val - 1].classList.add('selected');
           }
         });
       }
 
-      // Survey open
       if (state.surveyOpen) {
         Object.entries(state.surveyOpen).forEach(([id, val]) => {
           const el = document.getElementById(id);
@@ -1519,25 +1504,23 @@
     }
   }
 
-  // Attach auto-save listeners to all form fields
   document.addEventListener('input', (e) => {
-    if (e.target.closest('#freeplay-entries') || e.target.closest('[id^="challenge"]')
-        || e.target.closest('#panel-survey') || e.target.tagName === 'TEXTAREA') {
+    if (!testerId) return;
+    if (e.target.closest('#freeplay-entries') || e.target.closest('[id^="challenge"]') || e.target.closest('#panel-survey')) {
       markDirty();
     }
   });
+
   document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('match-pill') || e.target.classList.contains('rating-pill')) {
+    if (!testerId) return;
+    if (e.target.classList.contains('match-pill') || e.target.classList.contains('rating-pill') || e.target.classList.contains('entry-remove')) {
       markDirty();
     }
   });
 
-  // Load auto-saved data on page load (only if not authenticated — checkSession handles that case)
-  if (!testerId) loadAutoSave();
-
-  // Add resume button listener
-  document.getElementById('resume-btn').addEventListener('click', handleResume);
-
+  // ============================================================
+  // Toast
+  // ============================================================
   // ============================================================
   // Secure download (fetches signed URL from server)
   // ============================================================
