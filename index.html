@@ -111,11 +111,19 @@
       transition: all 0.2s;
       white-space: nowrap;
     }
-    .tab:hover { color: var(--text); background: hsl(220, 12%, 11%); }
+    .tab:hover:not(:disabled) { color: var(--text); background: hsl(220, 12%, 11%); }
     .tab.active {
       background: var(--bg-raised);
       color: var(--accent);
       box-shadow: 0 1px 4px hsl(220, 18%, 4%, 0.4);
+    }
+    .tab.locked-tab {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+    @keyframes pulse-tab {
+      0%, 100% { background: transparent; }
+      50% { background: var(--accent); color: var(--bg); }
     }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
@@ -396,10 +404,10 @@
     <!-- Tabs -->
     <div class="tabs" id="tabs">
       <button class="tab active" data-tab="signup">Sign Up</button>
-      <button class="tab" data-tab="protocol">Protocol</button>
-      <button class="tab" data-tab="freeplay">Free Play</button>
-      <button class="tab" data-tab="challenges">Challenges</button>
-      <button class="tab" data-tab="survey">Survey</button>
+      <button class="tab locked-tab" data-tab="protocol" disabled>Protocol</button>
+      <button class="tab locked-tab" data-tab="freeplay" disabled>Free Play</button>
+      <button class="tab locked-tab" data-tab="challenges" disabled>Challenges</button>
+      <button class="tab locked-tab" data-tab="survey" disabled>Survey</button>
     </div>
 
     <!-- TAB: Sign Up -->
@@ -790,12 +798,25 @@
   // ============================================================
   document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => {
+      if (tab.disabled) {
+        showToast('Please complete sign up first to unlock this section.', 'error');
+        // Flash the signup tab
+        const signupTab = document.querySelector('.tab[data-tab="signup"]');
+        signupTab.style.animation = 'none';
+        signupTab.offsetHeight; // reflow
+        signupTab.style.animation = 'pulse-tab 0.6s ease';
+        return;
+      }
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
       tab.classList.add('active');
       document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
     });
   });
+
+  // Init empty form entries on page load (4 free play, 2 per challenge)
+  initFreePlayEntries();
+  initChallengeEntries();
 
   // ============================================================
   // Checkbox/radio UI
@@ -915,6 +936,12 @@
     document.getElementById('signup-form').style.display = 'none';
     document.getElementById('download-card').style.display = 'block';
     document.getElementById('flow-card').style.display = 'block';
+
+    // Unlock tabs
+    document.querySelectorAll('.locked-tab').forEach(tab => {
+      tab.disabled = false;
+      tab.classList.remove('locked-tab');
+    });
     // Download link uses secure API (generates signed URL on click)
     document.getElementById('download-link').addEventListener('click', handleDownload);
     document.getElementById('download-link').href = '#';
@@ -991,9 +1018,6 @@
 
     instructionsEl.innerHTML = html;
 
-    // Init form entries
-    initFreePlayEntries();
-    initChallengeEntries();
   }
 
   // ============================================================
@@ -1002,7 +1026,7 @@
   let freePlayCount = 0;
 
   function initFreePlayEntries() {
-    for (let i = 0; i < 3; i++) addFreePlayEntry();
+    for (let i = 0; i < 4; i++) addFreePlayEntry();
   }
 
   function addFreePlayEntry() {
