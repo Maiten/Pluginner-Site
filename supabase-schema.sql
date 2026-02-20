@@ -88,5 +88,15 @@ CREATE POLICY "Allow anonymous insert" ON challenge_log FOR INSERT TO anon WITH 
 CREATE POLICY "Allow anonymous insert" ON survey_ratings FOR INSERT TO anon WITH CHECK (true);
 CREATE POLICY "Allow anonymous insert" ON survey_open FOR INSERT TO anon WITH CHECK (true);
 
--- Policies: allow select for anon (needed to look up tester_id by email)
+-- Policies: allow select for anon (needed to look up tester_id by email and load previous answers)
 CREATE POLICY "Allow anonymous select" ON beta_testers FOR SELECT TO anon USING (true);
+CREATE POLICY "Allow anonymous select" ON free_play_log FOR SELECT TO anon USING (true);
+CREATE POLICY "Allow anonymous select" ON challenge_log FOR SELECT TO anon USING (true);
+CREATE POLICY "Allow anonymous select" ON survey_ratings FOR SELECT TO anon USING (true);
+CREATE POLICY "Allow anonymous select" ON survey_open FOR SELECT TO anon USING (true);
+
+-- Policies: allow delete for anon (needed for re-save / update pattern)
+CREATE POLICY "Allow anonymous delete" ON free_play_log FOR DELETE TO anon USING (true);
+CREATE POLICY "Allow anonymous delete" ON challenge_log FOR DELETE TO anon USING (true);
+CREATE POLICY "Allow anonymous delete" ON survey_ratings FOR DELETE TO anon USING (true);
+CREATE POLICY "Allow anonymous delete" ON survey_open FOR DELETE TO anon USING (true);
