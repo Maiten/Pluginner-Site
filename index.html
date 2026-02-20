@@ -980,8 +980,8 @@
         <strong>⚠ macOS security note:</strong> The beta is not yet notarized with Apple, so macOS may block it. If that happens:<br><br>
         <strong>Option 1:</strong> Right-click the plugin file → Open → confirm<br>
         <strong>Option 2:</strong> Open Terminal and run:<br>
-        <code style="color:var(--accent)">xattr -cr ~/Library/Audio/Plug-Ins/VST3/PluginnerFX.vst3</code><br>
-        <code style="color:var(--accent)">xattr -cr ~/Library/Audio/Plug-Ins/Components/PluginnerFX.component</code><br><br>
+        <code style="color:var(--accent)">xattr -cr "~/Library/Audio/Plug-Ins/VST3/PluginnerFX Beta.vst3"</code><br>
+        <code style="color:var(--accent)">xattr -cr "~/Library/Audio/Plug-Ins/Components/PluginnerFX Beta.component"</code><br><br>
         This is normal for unsigned beta software and only needs to be done once.
       </div>`;
     } else if (os === 'Windows') {

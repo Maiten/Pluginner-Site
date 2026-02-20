@@ -39,10 +39,10 @@ Nothing secret is exposed in the client-side code. The password lives only in Ve
 On your Mac, from the installed plugin locations:
 ```bash
 mkdir -p /tmp/pluginner-beta
-cp -R ~/Library/Audio/Plug-Ins/VST3/PluginnerFX.vst3 /tmp/pluginner-beta/
-cp -R ~/Library/Audio/Plug-Ins/Components/PluginnerFX.component /tmp/pluginner-beta/
+cp -R "~/Library/Audio/Plug-Ins/VST3/PluginnerFX Beta.vst3" /tmp/pluginner-beta/
+cp -R "~/Library/Audio/Plug-Ins/Components/PluginnerFX Beta.component" /tmp/pluginner-beta/
 cd /tmp/pluginner-beta
-zip -r ~/Desktop/PluginnerFX-beta.zip PluginnerFX.vst3 PluginnerFX.component
+zip -r ~/Desktop/PluginnerFX-beta.zip "PluginnerFX Beta.vst3" "PluginnerFX Beta.component"
 ```
 
 Upload `PluginnerFX-beta.zip` to the `beta-downloads` bucket in Supabase Storage.
